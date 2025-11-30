@@ -11,7 +11,7 @@ const server = createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3001;
-const BLOG_ROOT = path.join(__dirname, '../../');
+const BLOG_ROOT = path.join(__dirname, '../../ramgaku.github.io');
 
 // 미들웨어
 app.use(express.json());
@@ -54,30 +54,45 @@ app.get('/api/posts/:id', async (req, res) => {
 
 app.post('/api/posts', async (req, res) => {
     try {
+        console.log('POST /api/posts 요청 받음');
+        console.log('Request body:', req.body);
+        
         const { category, id, title, content } = req.body;
+        console.log('Extracted values:', { category, id, title, contentLength: content?.length });
         
         // 파일 저장
         const filePath = `posts/${category}/${id}.txt`;
         const fullPath = path.join(BLOG_ROOT, filePath);
+        console.log('File path:', fullPath);
+        
         await fs.ensureDir(path.dirname(fullPath));
+        console.log('Directory created successfully');
+        
         await fs.writeFile(fullPath, content);
+        console.log('File written successfully');
         
         // index.json 업데이트
         const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
+        console.log('Index path:', indexPath);
+        
         const postsIndex = await fs.readJson(indexPath);
+        console.log('Index loaded successfully');
         
         const newPost = {
             id,
             path: filePath,
             category: category.charAt(0).toUpperCase() + category.slice(1)
         };
+        console.log('New post object:', newPost);
         
         postsIndex.posts.unshift(newPost);
         await fs.writeJson(indexPath, postsIndex, { spaces: 2 });
+        console.log('Index updated successfully');
         
         res.json({ success: true, post: newPost });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to create post' });
+        console.error('POST /api/posts 에러:', error);
+        res.status(500).json({ error: 'Failed to create post', details: error.message });
     }
 });
 
