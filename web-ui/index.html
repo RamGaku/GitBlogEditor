@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Manager</title>
+    <link rel="stylesheet" href="https://unpkg.com/xterm@5.3.0/css/xterm.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>🚀 Blog Manager</h1>
+            <div class="header-actions">
+                <button id="refresh-posts" class="btn btn-secondary">새로고침</button>
+                <button id="deploy-blog" class="btn btn-primary">배포하기</button>
+            </div>
+        </header>
+        
+        <main class="main">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3>📝 게시물</h3>
+                    <button id="new-post" class="btn btn-primary full-width">새 게시물</button>
+                    <div id="posts-list" class="posts-list">
+                        <!-- 게시물 목록이 여기에 동적으로 추가됨 -->
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>📁 파일 브라우저</h3>
+                    <div id="file-browser" class="file-browser">
+                        <!-- 파일 트리가 여기에 표시됨 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="editor">📄 에디터</button>
+                    <button class="tab-btn" data-tab="preview">👁️ 미리보기</button>
+                    <button class="tab-btn" data-tab="terminal">💻 터미널</button>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- 에디터 탭 -->
+                    <div id="tab-editor" class="tab-pane active">
+                        <div class="editor-header">
+                            <input type="text" id="post-title" placeholder="게시물 제목" class="post-title-input">
+                            <select id="post-category" class="post-category-select">
+                                <option value="web">Web</option>
+                                <option value="playground">Playground</option>
+                                <option value="trouble">삽질 기록</option>
+                            </select>
+                            <button id="save-post" class="btn btn-success">저장</button>
+                        </div>
+                        <div id="editor" class="editor"></div>
+                    </div>
+                    
+                    <!-- 미리보기 탭 -->
+                    <div id="tab-preview" class="tab-pane">
+                        <div class="preview-content" id="preview-content">
+                            <p class="preview-placeholder">게시물을 작성하면 미리보기가 여기에 표시됩니다.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 터미널 탭 -->
+                    <div id="tab-terminal" class="tab-pane">
+                        <div class="terminal-header">
+                            <button id="clear-terminal" class="btn btn-secondary">화면 지우기</button>
+                            <span class="terminal-status">터미널 연결됨</span>
+                        </div>
+                        <div id="terminal" class="terminal-container"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <div class="status-bar">
+            <span id="connection-status">🟢 연결됨</span>
+            <span id="file-status"></span>
+            <span id="git-status"></span>
+        </div>
+    </div>
+    
+    <!-- 새 게시물 모달 -->
+    <div id="new-post-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>새 게시물 만들기</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="modal-title" placeholder="게시물 제목">
+                </div>
+                <div class="form-group">
+                    <label>카테고리</label>
+                    <select id="modal-category">
+                        <option value="web">Web</option>
+                        <option value="playground">Playground</option>
+                        <option value="trouble">삽질 기록</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID (자동 생성됨)</label>
+                    <input type="text" id="modal-id" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="btn btn-secondary">취소</button>
+                <button id="modal-create" class="btn btn-primary">생성</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://unpkg.com/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script>
+        // 라이브러리 로딩 확인
+        window.addEventListener('load', () => {
+            console.log('라이브러리 로딩 상태:');
+            console.log('- Socket.io:', typeof io !== 'undefined');
+            console.log('- XTerm:', typeof Terminal !== 'undefined');
+            console.log('- Monaco:', typeof monaco !== 'undefined');
+            console.log('- Marked:', typeof marked !== 'undefined');
+        });
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
