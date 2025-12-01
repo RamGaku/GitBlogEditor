@@ -7,6 +7,32 @@ GitHub Pages 블로그 관리를 위한 Node.js 기반 시스템.
 - 문서/코드에 꾸미는 말, 감성적 표현 사용 금지
 - 간결하고 사실적인 설명만 작성
 
+## ⚠️ 중요: 블로그 게시물 작성 시 반드시 API 사용
+
+**ramgaku.github.io 게시물 생성/수정/삭제 시 파일을 직접 수정하지 말 것!**
+
+반드시 GitBlogEditor API를 통해 작업:
+
+```bash
+# 서버 실행
+npm start
+
+# 게시물 생성
+curl -X POST http://localhost:3001/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{"id":"post-id","category":"Web","content":"---\ntitle: 제목\n---\n본문"}'
+
+# 게시물 수정
+curl -X POST http://localhost:3001/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{"id":"existing-post-id","category":"Web","content":"수정된 내용"}'
+
+# 게시물 삭제
+curl -X DELETE http://localhost:3001/api/posts/post-id
+```
+
+API가 index.json과 index.html 사이드바를 자동으로 업데이트함.
+
 ## 구조
 
 ```
