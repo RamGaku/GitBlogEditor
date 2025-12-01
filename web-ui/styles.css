@@ -184,26 +184,6 @@ body {
     margin: 1rem 0;
 }
 
-/* 터미널 */
-.terminal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    background: #2d2d30;
-    border-bottom: 1px solid #3c3c3c;
-}
-
-.terminal-status {
-    color: #4ec9b0;
-    font-size: 0.9rem;
-}
-
-.terminal-container {
-    height: calc(100% - 50px);
-    padding: 1rem;
-}
-
 /* 버튼 */
 .btn {
     padding: 0.5rem 1rem;

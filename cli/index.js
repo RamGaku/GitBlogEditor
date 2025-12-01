@@ -6,8 +6,17 @@ const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
 
+// config 로드
+const configPath = path.join(__dirname, '../config.json');
+const config = fs.readJsonSync(configPath);
+const ENCODING = config.encoding || 'utf-8';
+
+// blogRoot가 절대 경로인지 상대 경로인지 확인하여 처리
+const BLOG_ROOT = path.isAbsolute(config.blogRoot)
+    ? config.blogRoot
+    : path.join(__dirname, '..', config.blogRoot);
+
 const program = new Command();
-const BLOG_ROOT = path.join(__dirname, '../../');
 
 program
     .name('blog')
@@ -228,11 +237,11 @@ tags: []
     const filePath = `posts/${category}/${id}.txt`;
     const fullPath = path.join(BLOG_ROOT, filePath);
     await fs.ensureDir(path.dirname(fullPath));
-    await fs.writeFile(fullPath, content);
-    
+    await fs.writeFile(fullPath, content, ENCODING);
+
     // index.json 업데이트
     const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
-    const postsIndex = await fs.readJson(indexPath);
+    const postsIndex = await fs.readJson(indexPath, { encoding: ENCODING });
     
     const newPost = {
         id,
@@ -243,14 +252,14 @@ tags: []
     // 중복 체크
     if (!postsIndex.posts.find(p => p.id === id)) {
         postsIndex.posts.unshift(newPost);
-        await fs.writeJson(indexPath, postsIndex, { spaces: 2 });
+        await fs.writeJson(indexPath, postsIndex, { spaces: 2, encoding: ENCODING });
     }
 }
 
 // 게시물 목록 로드
 async function loadPosts() {
     const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
-    const postsIndex = await fs.readJson(indexPath);
+    const postsIndex = await fs.readJson(indexPath, { encoding: ENCODING });
     return postsIndex.posts;
 }
 

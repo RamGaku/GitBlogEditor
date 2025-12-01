@@ -1,0 +1,8 @@
+{
+  "blogRoot": "../ramgaku.github.io",
+  "encoding": "utf-8",
+  "server": {
+    "port": 3001
+  },
+  "categories": ["web", "playground", "trouble"]
+}

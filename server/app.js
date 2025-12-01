@@ -3,15 +3,23 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs-extra');
-const { spawn } = require('child_process');
 const chokidar = require('chokidar');
+
+// config 로드
+const configPath = path.join(__dirname, '../config.json');
+const config = fs.readJsonSync(configPath);
+const ENCODING = config.encoding || 'utf-8';
+
+// blogRoot가 절대 경로인지 상대 경로인지 확인하여 처리
+const BLOG_ROOT = path.isAbsolute(config.blogRoot)
+    ? config.blogRoot
+    : path.join(__dirname, '..', config.blogRoot);
 
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3001;
-const BLOG_ROOT = path.join(__dirname, '../../ramgaku.github.io');
+const PORT = process.env.PORT || config.server?.port || 3001;
 
 // 미들웨어
 app.use(express.json());
@@ -28,7 +36,7 @@ app.get('/', (req, res) => {
 // API 라우트
 app.get('/api/posts', async (req, res) => {
     try {
-        const postsIndex = await fs.readJson(path.join(BLOG_ROOT, 'posts/index.json'));
+        const postsIndex = await fs.readJson(path.join(BLOG_ROOT, 'posts/index.json'), { encoding: ENCODING });
         res.json(postsIndex);
     } catch (error) {
         res.status(500).json({ error: 'Failed to read posts index' });
@@ -38,14 +46,14 @@ app.get('/api/posts', async (req, res) => {
 app.get('/api/posts/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const postsIndex = await fs.readJson(path.join(BLOG_ROOT, 'posts/index.json'));
+        const postsIndex = await fs.readJson(path.join(BLOG_ROOT, 'posts/index.json'), { encoding: ENCODING });
         const post = postsIndex.posts.find(p => p.id === id);
-        
+
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        
-        const content = await fs.readFile(path.join(BLOG_ROOT, post.path), 'utf-8');
+
+        const content = await fs.readFile(path.join(BLOG_ROOT, post.path), ENCODING);
         res.json({ ...post, content });
     } catch (error) {
         res.status(500).json({ error: 'Failed to read post content' });
@@ -67,15 +75,15 @@ app.post('/api/posts', async (req, res) => {
         
         await fs.ensureDir(path.dirname(fullPath));
         console.log('Directory created successfully');
-        
-        await fs.writeFile(fullPath, content);
+
+        await fs.writeFile(fullPath, content, ENCODING);
         console.log('File written successfully');
-        
+
         // index.json 업데이트
         const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
         console.log('Index path:', indexPath);
-        
-        const postsIndex = await fs.readJson(indexPath);
+
+        const postsIndex = await fs.readJson(indexPath, { encoding: ENCODING });
         console.log('Index loaded successfully');
         
         const newPost = {
@@ -84,9 +92,17 @@ app.post('/api/posts', async (req, res) => {
             category: category.charAt(0).toUpperCase() + category.slice(1)
         };
         console.log('New post object:', newPost);
-        
-        postsIndex.posts.unshift(newPost);
-        await fs.writeJson(indexPath, postsIndex, { spaces: 2 });
+
+        // 중복 체크: 기존 게시물이 있으면 업데이트, 없으면 추가
+        const existingIndex = postsIndex.posts.findIndex(p => p.id === id);
+        if (existingIndex !== -1) {
+            postsIndex.posts[existingIndex] = newPost;
+            console.log('Existing post updated');
+        } else {
+            postsIndex.posts.unshift(newPost);
+            console.log('New post added');
+        }
+        await fs.writeJson(indexPath, postsIndex, { spaces: 2, encoding: ENCODING });
         console.log('Index updated successfully');
         
         res.json({ success: true, post: newPost });
@@ -96,64 +112,60 @@ app.post('/api/posts', async (req, res) => {
     }
 });
 
+// 게시물 삭제
+app.delete('/api/posts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log('DELETE /api/posts 요청 받음:', id);
+
+        const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
+        const postsIndex = await fs.readJson(indexPath, { encoding: ENCODING });
+
+        const postIndex = postsIndex.posts.findIndex(p => p.id === id);
+        if (postIndex === -1) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        const post = postsIndex.posts[postIndex];
+        const fullPath = path.join(BLOG_ROOT, post.path);
+
+        // 파일 삭제
+        if (await fs.pathExists(fullPath)) {
+            await fs.remove(fullPath);
+            console.log('File deleted:', fullPath);
+        }
+
+        // index.json에서 제거
+        postsIndex.posts.splice(postIndex, 1);
+        await fs.writeJson(indexPath, postsIndex, { spaces: 2, encoding: ENCODING });
+        console.log('Index updated - post removed');
+
+        res.json({ success: true, message: `Post '${id}' deleted` });
+    } catch (error) {
+        console.error('DELETE /api/posts 에러:', error);
+        res.status(500).json({ error: 'Failed to delete post', details: error.message });
+    }
+});
+
 // Socket.io 연결 처리
 io.on('connection', (socket) => {
     console.log('클라이언트 연결:', socket.id);
-    
-    let terminal = null;
-    
-    // 터미널 시작
-    socket.on('start-terminal', () => {
-        if (terminal) {
-            terminal.kill();
-        }
-        
-        terminal = spawn('cmd.exe', [], {
-            cwd: BLOG_ROOT,
-            shell: true,
-            stdio: ['pipe', 'pipe', 'pipe']
-        });
-        
-        terminal.stdout.on('data', (data) => {
-            socket.emit('terminal-output', data.toString());
-        });
-        
-        terminal.stderr.on('data', (data) => {
-            socket.emit('terminal-output', data.toString());
-        });
-        
-        terminal.on('close', (code) => {
-            socket.emit('terminal-output', `\r\n프로세스 종료 (코드: ${code})\r\n`);
-        });
-        
-        socket.emit('terminal-output', `Blog Manager Terminal\r\n현재 디렉토리: ${BLOG_ROOT}\r\n\r\n`);
-    });
-    
-    // 터미널 명령어 입력
-    socket.on('terminal-input', (data) => {
-        if (terminal) {
-            terminal.stdin.write(data);
-        }
-    });
-    
+
     // 파일 감시 시작
     const watcher = chokidar.watch([
         path.join(BLOG_ROOT, 'posts/**/*.txt'),
         path.join(BLOG_ROOT, 'posts/index.json')
     ]);
-    
+
     watcher.on('change', (filePath) => {
         socket.emit('file-changed', {
             path: filePath,
             relativePath: path.relative(BLOG_ROOT, filePath)
         });
     });
-    
+
     socket.on('disconnect', () => {
         console.log('클라이언트 연결 해제:', socket.id);
-        if (terminal) {
-            terminal.kill();
-        }
         watcher.close();
     });
 });
