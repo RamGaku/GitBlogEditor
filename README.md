@@ -173,8 +173,4 @@ node cli/index.js deploy "새 게시물 추가"
 
 ## 📄 라이선스
 
-MIT License - 자유롭게 사용, 수정, 배포할 수 있습니다.
-
----
-
-**🎯 지금 바로 브라우저에서 블로그를 편집해보세요!**
+MIT License

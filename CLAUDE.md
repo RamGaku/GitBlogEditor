@@ -1,6 +1,11 @@
 # GitBlogEditor (Blog-Manager)
 
-GitHub Pages 블로그 관리를 위한 Node.js 기반 시스템입니다.
+GitHub Pages 블로그 관리를 위한 Node.js 기반 시스템.
+
+## 작성 규칙
+
+- 문서/코드에 꾸미는 말, 감성적 표현 사용 금지
+- 간결하고 사실적인 설명만 작성
 
 ## 구조
 
