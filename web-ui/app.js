@@ -137,6 +137,11 @@ class BlogManager {
         if (tabName === 'editor' && this.editor) {
             setTimeout(() => this.editor.layout(), 100);
         }
+
+        // 미리보기 탭 클릭 시 즉시 미리보기 업데이트
+        if (tabName === 'preview' && this.editor) {
+            this.updatePreview();
+        }
     }
 
     // 게시물 목록 로드
@@ -224,11 +229,31 @@ class BlogManager {
 
     // 미리보기 업데이트
     updatePreview() {
+        if (!this.editor) return;
+
         const content = this.editor.getValue();
+        const previewEl = document.getElementById('preview-content');
+
+        if (!content || content.trim() === '') {
+            previewEl.innerHTML = '<p class="preview-placeholder">에디터에 내용을 입력하면 미리보기가 여기에 표시됩니다.</p>';
+            return;
+        }
+
         const markdownContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
 
-        const html = marked(markdownContent);
-        document.getElementById('preview-content').innerHTML = html;
+        if (typeof marked === 'undefined') {
+            previewEl.innerHTML = '<p style="color: red;">marked 라이브러리 로드 실패</p>';
+            console.error('marked 라이브러리가 로드되지 않았습니다.');
+            return;
+        }
+
+        try {
+            const html = marked.parse(markdownContent);
+            previewEl.innerHTML = html;
+        } catch (e) {
+            console.error('마크다운 파싱 오류:', e);
+            previewEl.innerHTML = '<pre>' + markdownContent + '</pre>';
+        }
     }
 
     // 현재 게시물 저장

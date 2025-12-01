@@ -106,8 +106,15 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/lib/marked.umd.min.js"></script>
+    <script>
+        // AMD 로더가 marked를 가로채지 않도록 전역 변수 확보
+        if (typeof marked === 'undefined' && typeof define === 'function' && define.amd) {
+            // marked가 AMD로 로드된 경우 전역으로 노출
+            require(['marked'], function(m) { window.marked = m; });
+        }
+    </script>
     <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
