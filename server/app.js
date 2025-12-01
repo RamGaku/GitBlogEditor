@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs-extra');
 const chokidar = require('chokidar');
+const { buildPostHtml } = require('./html-generator');
 
 // config 로드
 const configPath = path.join(__dirname, '../config.json');
@@ -79,6 +80,12 @@ app.post('/api/posts', async (req, res) => {
         await fs.writeFile(fullPath, content, ENCODING);
         console.log('File written successfully');
 
+        // HTML 파일 생성
+        const htmlPath = fullPath.replace('.txt', '.html');
+        const htmlContent = buildPostHtml(id, category, content);
+        await fs.writeFile(htmlPath, htmlContent, ENCODING);
+        console.log('HTML file generated:', htmlPath);
+
         // index.json 업데이트
         const indexPath = path.join(BLOG_ROOT, 'posts/index.json');
         console.log('Index path:', indexPath);
@@ -129,10 +136,15 @@ app.delete('/api/posts/:id', async (req, res) => {
         const post = postsIndex.posts[postIndex];
         const fullPath = path.join(BLOG_ROOT, post.path);
 
-        // 파일 삭제
+        // 파일 삭제 (txt + html)
         if (await fs.pathExists(fullPath)) {
             await fs.remove(fullPath);
             console.log('File deleted:', fullPath);
+        }
+        const htmlPath = fullPath.replace('.txt', '.html');
+        if (await fs.pathExists(htmlPath)) {
+            await fs.remove(htmlPath);
+            console.log('HTML file deleted:', htmlPath);
         }
 
         // index.json에서 제거
