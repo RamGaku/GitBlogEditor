@@ -85,6 +85,11 @@ class BlogManager {
             this.deployBlog();
         });
 
+        // 삭제 버튼
+        document.getElementById('delete-post').addEventListener('click', () => {
+            this.deleteCurrentPost();
+        });
+
         // 새로고침 버튼
         document.getElementById('refresh-posts').addEventListener('click', () => {
             this.loadPosts();
@@ -374,9 +379,72 @@ tags: []
         }
     }
 
+    // 현재 게시물 삭제
+    async deleteCurrentPost() {
+        if (!this.currentPost) {
+            alert('삭제할 게시물이 없습니다.');
+            return;
+        }
+
+        if (!confirm(`"${this.currentPost.id}" 게시물을 삭제하시겠습니까?\n\n삭제 후 PUSH를 눌러야 GitHub Pages에 반영됩니다.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/posts/${this.currentPost.id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                this.updateFileStatus(`${this.currentPost.id} 삭제됨`);
+                this.currentPost = null;
+                this.editor.setValue('');
+                document.getElementById('post-title').value = '';
+                await this.loadPosts();
+            } else {
+                throw new Error(result.error || '삭제 실패');
+            }
+        } catch (error) {
+            console.error('삭제 실패:', error);
+            alert('삭제에 실패했습니다.\n' + error.message);
+        }
+
+        setTimeout(() => this.updateFileStatus(''), 3000);
+    }
+
     // 블로그 배포
-    deployBlog() {
-        alert('배포 기능은 CLI를 통해 사용해주세요.\n명령어: blog-manager deploy');
+    async deployBlog() {
+        if (!confirm('블로그를 GitHub에 배포하시겠습니까?')) {
+            return;
+        }
+
+        this.updateFileStatus('배포 중...');
+
+        try {
+            const response = await fetch('/api/deploy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.updateFileStatus('배포 완료!');
+                alert('배포가 완료되었습니다.');
+            } else {
+                throw new Error(result.details || '배포 실패');
+            }
+        } catch (error) {
+            console.error('배포 실패:', error);
+            this.updateFileStatus('배포 실패');
+            alert('배포에 실패했습니다.\n' + error.message);
+        }
+
+        setTimeout(() => this.updateFileStatus(''), 3000);
     }
 
     // 연결 상태 업데이트

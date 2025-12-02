@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs-extra');
 const chokidar = require('chokidar');
+const { execSync } = require('child_process');
 const { buildPostHtml } = require('./html-generator');
 
 // config 로드
@@ -21,6 +22,42 @@ const server = createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || config.server?.port || 3001;
+
+// 포트 사용 중인 프로세스 kill
+function killProcessOnPort(port) {
+    try {
+        if (process.platform === 'win32') {
+            const result = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
+            const lines = result.trim().split('\n');
+            const pids = new Set();
+
+            for (const line of lines) {
+                const parts = line.trim().split(/\s+/);
+                const pid = parts[parts.length - 1];
+                if (pid && pid !== '0') {
+                    pids.add(pid);
+                }
+            }
+
+            for (const pid of pids) {
+                try {
+                    execSync(`taskkill /PID ${pid} /F`, { encoding: 'utf-8' });
+                    console.log(`포트 ${port} 사용 중인 프로세스(PID: ${pid}) 종료됨`);
+                } catch (e) {
+                    // 이미 종료된 경우 무시
+                }
+            }
+        } else {
+            // Linux/macOS
+            execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`, { encoding: 'utf-8' });
+            console.log(`포트 ${port} 사용 중인 프로세스 종료됨`);
+        }
+    } catch (e) {
+        // 포트를 사용하는 프로세스가 없는 경우
+    }
+}
+
+killProcessOnPort(PORT);
 
 // 미들웨어
 app.use(express.json());
@@ -156,6 +193,53 @@ app.delete('/api/posts/:id', async (req, res) => {
     } catch (error) {
         console.error('DELETE /api/posts 에러:', error);
         res.status(500).json({ error: 'Failed to delete post', details: error.message });
+    }
+});
+
+// 블로그 배포 API
+app.post('/api/deploy', async (req, res) => {
+    console.log('POST /api/deploy 요청 받음');
+
+    try {
+        const { exec } = require('child_process');
+
+        // git add, commit, push 실행
+        const commands = [
+            'git add .',
+            `git commit -m "Deploy: ${new Date().toISOString()}"`,
+            'git push'
+        ];
+
+        const results = [];
+
+        for (const cmd of commands) {
+            const result = await new Promise((resolve, reject) => {
+                exec(cmd, { cwd: BLOG_ROOT, encoding: 'utf-8' }, (error, stdout, stderr) => {
+                    if (error) {
+                        // git commit에서 nothing to commit은 에러가 아님
+                        if (cmd.includes('git commit') && stderr.includes('nothing to commit')) {
+                            resolve({ cmd, stdout: 'Nothing to commit', stderr: '' });
+                        } else {
+                            reject({ cmd, error: error.message, stderr });
+                        }
+                    } else {
+                        resolve({ cmd, stdout, stderr });
+                    }
+                });
+            });
+            results.push(result);
+            console.log(`${cmd}: ${result.stdout || result.stderr}`);
+        }
+
+        res.json({ success: true, message: '배포 완료', results });
+    } catch (error) {
+        console.error('배포 에러:', error);
+        res.status(500).json({
+            success: false,
+            error: '배포 실패',
+            details: error.error || error.message,
+            command: error.cmd
+        });
     }
 });
 

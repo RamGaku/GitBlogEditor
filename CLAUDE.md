@@ -10,6 +10,7 @@ GitHub Pages 블로그 관리를 위한 Node.js 기반 시스템.
 ## ⚠️ 중요: 블로그 게시물 작성 시 반드시 API 사용
 
 **ramgaku.github.io 게시물 생성/수정/삭제 시 파일을 직접 수정하지 말 것!**
+**ramgaku.github.io 게시물 생성/수정/삭제 시 제약이 있다면, 이 API를 수정해서 되도록 할 것!**
 
 반드시 GitBlogEditor API를 통해 작업:
 

@@ -222,6 +222,15 @@ body {
     background: #3aa08a;
 }
 
+.btn-danger {
+    background: #f14c4c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d63939;
+}
+
 .full-width {
     width: 100%;
 }

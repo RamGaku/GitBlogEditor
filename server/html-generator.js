@@ -6,18 +6,20 @@
 function markdownToHtml(md) {
     let html = md;
 
-    // 코드 블록 추출
+    // 코드 블록 추출 (```)
     const codeBlocks = [];
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-        const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, lang, code) => {
+        // 코드 블록 내용에서 앞뒤 줄바꿈 제거
+        const trimmedCode = code.replace(/^\n+|\n+$/g, '');
+        const escaped = trimmedCode.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-        codeBlocks.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
+        codeBlocks.push(`<pre><code class="language-${lang || 'text'}">${escaped}</code></pre>`);
         return placeholder;
     });
 
-    // 인라인 코드 추출
+    // 인라인 코드 추출 (단일 백틱)
     const inlineCodes = [];
-    html = html.replace(/`([^`]+)`/g, (match, code) => {
+    html = html.replace(/`([^`\n]+)`/g, (match, code) => {
         const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
         inlineCodes.push(`<code>${code}</code>`);
         return placeholder;
@@ -44,9 +46,15 @@ function markdownToHtml(md) {
     // iframe
     html = html.replace(/<iframe([^>]*)><\/iframe>/g, '<div class="iframe-container"><iframe$1></iframe></div>');
 
-    // 리스트
-    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+    // 순서 없는 리스트
+    html = html.replace(/^- (.+)$/gm, '<ul><li>$1</li></ul>');
+
+    // 순서 있는 리스트
+    html = html.replace(/^\d+\. (.+)$/gm, '<ol><li>$1</li></ol>');
+
+    // 연속된 리스트 아이템 병합
+    html = html.replace(/<\/ul>\n<ul>/g, '\n');
+    html = html.replace(/<\/ol>\n<ol>/g, '\n');
 
     // 단락
     html = html.split('\n\n').map(para => {
